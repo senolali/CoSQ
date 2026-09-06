@@ -1,0 +1,5 @@
+{question_block}
+Let's think step by step, then give your final answer on a line beginning with
+"Answer:". Keep the final answer to one short sentence.
+
+Reasoning:

@@ -1,0 +1,9 @@
+{question_block}
+You have confirmed that you are certain of the following:
+
+{certain_needs}
+
+Using only that information, reason step by step and then state your choice on a final
+line beginning with "Answer:". Answer with exactly one of the options above.
+
+Reasoning:

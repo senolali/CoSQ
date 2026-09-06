@@ -1,0 +1,8 @@
+{question_block}
+Let's think step by step, then state your choice on a final line beginning with "Answer:".
+Answer with exactly one of the options above.
+
+If you are not certain of the answer, you may reply "I don't know" instead of choosing
+an option. Answering incorrectly is worse than saying you do not know.
+
+Reasoning:

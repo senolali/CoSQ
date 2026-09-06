@@ -1,0 +1,9 @@
+{question_block}
+Consider this single piece of information:
+
+{need}
+
+Are you certain of this information? Reply with exactly one word: "Certain" or "Uncertain".
+Do not explain.
+
+Answer:

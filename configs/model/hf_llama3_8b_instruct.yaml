@@ -1,0 +1,13 @@
+id: meta-llama/Meta-Llama-3-8B-Instruct
+revision: "REPLACE-WITH-HUGGINGFACE-COMMIT-SHA"
+backend: hf_local
+quantization: nf4
+compute_dtype: bfloat16
+generation:
+  temperature: 0.0
+  top_p: 0.95
+  max_new_tokens: 256
+  seed: 1002
+backend_params:
+  device_map: auto
+  trust_remote_code: false

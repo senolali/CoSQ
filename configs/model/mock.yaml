@@ -1,0 +1,9 @@
+id: mock
+revision: n/a
+backend: mock
+quantization: null
+generation:
+  temperature: 0.0
+  top_p: 0.95
+  max_new_tokens: 256
+  seed: 1002

@@ -1,0 +1,22 @@
+# End-to-end smoke test: no GPU, no network. Numbers are not meaningful.
+name: smoke_mock
+model: configs/model/mock.yaml
+data:
+  name: jsonl
+  path: tests/fixtures/mini.jsonl
+  n: 3
+  seed: 1002
+strategies:
+  - name: direct
+  - name: cot
+  - name: cot_abstain
+  - name: cosq
+  - name: cosq_graded_gate
+    label: cosq_graded_gate_mean060
+    threshold: 0.60
+    aggregator: mean
+    on_empty: abstain
+repeats: 1
+seed: 1002
+lang: en
+open_ended: false

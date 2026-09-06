@@ -1,0 +1,7 @@
+{question_block}
+Before answering, list the individual pieces of information you would need in order to
+answer this question correctly. Do not answer the question yet.
+
+List them one per line, numbered, with no commentary.
+
+Required information:

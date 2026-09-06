@@ -1,0 +1,11 @@
+id: gpt-4o-mini
+revision: hosted
+backend: openai
+quantization: null
+generation:
+  temperature: 0.0
+  top_p: 0.95
+  max_new_tokens: 256
+  seed: 1002
+backend_params:
+  token_env: OPENAI_API_KEY

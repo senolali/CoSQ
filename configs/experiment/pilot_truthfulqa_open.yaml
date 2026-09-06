@@ -1,0 +1,22 @@
+name: pilot_truthfulqa_open
+model: configs/model/hf_llama3_8b_instruct.yaml
+data:
+  name: truthfulqa_mc1
+  n: 100
+  seed: 1002
+strategies:
+  - name: direct
+  - name: cot
+  - name: cot_abstain
+  - name: cosq
+    tau: 0.0
+    on_empty: abstain
+  - name: cosq_graded_gate
+    label: cosq_graded_gate_mean060
+    threshold: 0.60
+    aggregator: mean
+    on_empty: abstain
+repeats: 1
+seed: 1002
+lang: en
+open_ended: true

@@ -1,0 +1,5 @@
+{question_block}
+Let's think step by step, then state your choice on a final line beginning with "Answer:".
+Answer with exactly one of the options above.
+
+Reasoning:

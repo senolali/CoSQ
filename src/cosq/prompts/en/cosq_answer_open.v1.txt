@@ -1,0 +1,9 @@
+{question_block}
+You have confirmed that you are certain of the following:
+
+{certain_needs}
+
+Using only that information, reason step by step and then give your final answer on a
+line beginning with "Answer:". Keep the final answer to one short sentence.
+
+Reasoning:
