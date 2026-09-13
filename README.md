@@ -226,6 +226,17 @@ endpoints, operational secrets, or generated experimental results. Copy
 `.env.example` to `.env` for local credentials and never commit the resulting
 file.
 
+## Maintainer release workflow
+
+PyPI releases are published through GitHub Actions using PyPI Trusted
+Publishing. No long-lived PyPI token is stored in the repository or in GitHub
+secrets. To publish a release, configure the repository as a trusted publisher
+for the `cosq` project on PyPI, using owner `senolali`, repository `CoSQ`, and
+workflow file `.github/workflows/publish.yml`. Then either publish a GitHub
+Release or start the `Publish package to PyPI` workflow manually. The package
+version is read from `pyproject.toml`; update it before publishing a new
+release.
+
 ## Repository layout
 
 ```text
