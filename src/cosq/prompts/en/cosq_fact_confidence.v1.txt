@@ -1,0 +1,11 @@
+{question_block}
+Consider this information need:
+
+{need}
+
+State the factual claim you would rely on to answer the question.
+Then give your confidence in that claim as an integer from 0 to 100.
+Use exactly this format:
+FACT: <one concise factual claim>
+CONFIDENCE: <0-100>
+Do not answer the main question yet.

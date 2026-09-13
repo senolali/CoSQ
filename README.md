@@ -1,53 +1,122 @@
 # CoSQ: Chain-of-Self-Questioning
 
-CoSQ is a Python framework for **selective factual answering** with large language models. Instead of forcing a model to answer every question, CoSQ asks the model to decompose the question into required knowledge items, assess whether those items are supported, and then either answer or abstain with `I don't know`.
+[![PyPI](https://img.shields.io/pypi/v/cosq.svg)](https://pypi.org/project/cosq/)
+[![Python](https://img.shields.io/pypi/pyversions/cosq.svg)](https://pypi.org/project/cosq/)
+[![Tests](https://github.com/senolali/cosq/actions/workflows/ci.yml/badge.svg)](https://github.com/senolali/cosq/actions)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-The framework is designed for reproducible experiments on hallucination, abstention, answered accuracy, and risk-coverage trade-offs.
+CoSQ is a reproducible framework for **selective factual answering**. Before an
+LLM commits to an answer, it decomposes the question into required information,
+estimates confidence for each item, and either produces an answer or abstains.
+The goal is not to answer every question. It is to make answer commitment an
+explicit, measurable risk-control decision.
+
+This repository is the public research release accompanying:
+
+> **When Should LLMs Abstain? Chain-of-Self-Questioning for Selective Risk Control**
 
 ## Why CoSQ?
 
-Standard accuracy rewards guessing: an abstention is usually scored the same as a wrong answer. That is a poor fit for settings where a wrong answer is more costly than saying "I don't know". CoSQ treats factual answering as a selective prediction problem and reports:
+In high-consequence settings, an incorrect answer can be more harmful than a
+referral. A clinical decision-support system, for example, should sometimes
+direct a case to a specialist rather than present an unsupported answer with
+unwarranted confidence. CoSQ makes that behavior inspectable and tunable through
+the standard risk-coverage perspective used in selective prediction.
 
-- **Answered accuracy**: accuracy among parseable committed answers.
-- **Coverage**: the fraction of questions the model answers.
-- **Hallucination rate**: wrong committed answers divided by all questions.
-- **Abstention rate**: explicit `I don't know` responses.
-- **Unparseable rate**: outputs that cannot be mapped to the benchmark answer space.
+## Method
+
+CoSQ has three stages:
+
+1. **Information decomposition.** The model lists the facts needed to answer the
+   question correctly. Grounded and adaptive variants also assign a role to each
+   item, such as `CRITICAL` or `SUPPORTING`.
+2. **Item-level confidence.** The model gives a confidence score from 0 to 100
+   for each item. Scores are normalized to the interval `[0, 1]` by the runner.
+3. **Selective commitment.** A decision rule aggregates the item scores. If the
+   gate passes, the model answers using the accepted information; otherwise the
+   system returns an explicit abstention.
+
+The public implementation keeps raw completions and parsed records separate so
+that scoring and analysis can be repeated without making another model call.
+
+### CoSQ variants
+
+- **Grounded-CoSQ** answers from information items whose confidence passes the
+  threshold. The gate uses the mean confidence of the accepted items.
+- **Critical-CoSQ** asks the model to distinguish critical from supporting
+  information and applies the gate to the critical items.
+- **Adaptive-CoSQ** combines role-aware aggregate confidence with critical-item,
+  minimum-confidence, and consistency checks. It is intended as a flexible
+  operating policy when different questions require different amounts of
+  information.
+
+The baselines included in the package are direct answering, chain-of-thought
+answering, and abstention-aware chain-of-thought answering. Prompts are versioned
+text resources shipped with the package.
+
+## Metrics
+
+Let `N` be the number of questions, `C` correct committed answers, `W` wrong
+committed answers, and `A` abstentions.
+
+| Metric | Definition | Interpretation |
+| --- | --- | --- |
+| Answered accuracy (AA) | `C / (C + W)` | Accuracy among committed answers |
+| Coverage | `(C + W) / N` | Fraction of questions answered |
+| Hallucination rate (HR) | `W / N` | Unconditional wrong-commitment rate |
+| Abstention rate (AR) | `A / N` | Fraction routed away from answering |
+| Answered risk | `W / (C + W) = 1 - AA` | Error rate conditional on commitment |
+
+Coverage is reported as an operating characteristic, not as a standalone
+objective. A conservative system can deliberately answer fewer questions when
+wrong answers carry a high downstream cost. The useful comparison is the joint
+behavior of HR, AA, and coverage across thresholds.
+
+Unparseable outputs are tracked separately as a measurement-quality indicator.
+They are not silently counted as correct or wrong answers.
 
 ## Installation
 
-From PyPI, after release:
+From PyPI:
 
 ```bash
-pip install cosq
+python -m pip install cosq
 ```
 
-For local development:
+From source, including development tools:
 
 ```bash
 git clone https://github.com/senolali/cosq.git
 cd cosq
 python -m venv .venv
-.venv\Scripts\activate
-pip install -e ".[dev]"
+
+# Windows
+.venv\\Scripts\\activate
+
+# macOS/Linux
+# source .venv/bin/activate
+
+python -m pip install -e ".[dev]"
 ```
 
-Optional backends:
+Optional model integrations:
 
 ```bash
-pip install -e ".[hf]"      # local Hugging Face / transformers models
-pip install -e ".[openai]"  # OpenAI API backend
+python -m pip install -e ".[hf]"      # local Hugging Face models
+python -m pip install -e ".[openai]"  # OpenAI API models
 ```
 
-## Quick Start
+## Quick start without an API
 
-Run a no-network smoke test with the deterministic mock backend:
+The mock backend exercises the complete runner, cache, evaluator, analyzer, and
+reporting path without a network request or model credential:
 
 ```bash
 cosq run --config configs/experiment/smoke_mock.yaml --backend mock --allow-dirty
 ```
 
-The command writes a run directory under `results/runs/`. Then score and report it:
+The command prints the generated run directory. Use that directory for offline
+evaluation and reporting:
 
 ```bash
 cosq evaluate results/runs/<RUN_DIR>
@@ -55,139 +124,130 @@ cosq analyze results/runs/<RUN_DIR>
 cosq report results/runs/<RUN_DIR>
 ```
 
-## Using OpenAI Models
+Run `cosq --help` and `cosq <command> --help` for the complete CLI reference.
 
-Set your API key:
+## Running a local Hugging Face model
 
-```bash
-set OPENAI_API_KEY=sk-...        # Windows cmd
-$env:OPENAI_API_KEY="sk-..."     # PowerShell
-export OPENAI_API_KEY=sk-...     # macOS/Linux
+Edit a model file under `configs/model/` and replace the placeholder revision
+with an immutable Hugging Face commit SHA. This makes the experiment traceable
+and avoids silently changing model weights. For example:
+
+```yaml
+id: meta-llama/Meta-Llama-3-8B-Instruct
+revision: "REPLACE-WITH-HUGGINGFACE-COMMIT-SHA"
+backend: hf_local
+quantization: nf4
+compute_dtype: bfloat16
+generation:
+  temperature: 0.0
+  top_p: 0.95
+  max_new_tokens: 256
+  seed: 1002
+backend_params:
+  device_map: auto
+  trust_remote_code: false
 ```
 
-Probe the model:
+Set `HF_TOKEN` only when the selected model is gated. Then run the public
+experiment template:
 
 ```bash
-cosq probe --model configs/model/openai_gpt4o_mini.yaml
+cosq run --config configs/experiment/pilot_truthfulqa_open.yaml --allow-dirty
 ```
 
-Run a small open-ended TruthfulQA pilot:
+The example uses TruthfulQA MC1 and includes direct, CoT, Grounded-CoSQ,
+Critical-CoSQ, and Adaptive-CoSQ conditions at the illustrative `0.90`
+threshold. For a publication-scale study, define the full threshold sweep in a
+separate configuration and record the resolved YAML with the run.
+
+## Running an OpenAI API model
+
+Set the provider credential in the process environment or in a local `.env`
+file, which is ignored by Git:
+
+```bash
+# Windows PowerShell
+$env:OPENAI_API_KEY = "your-key"
+
+# macOS/Linux
+# export OPENAI_API_KEY=your-key
+```
+
+Use `configs/model/openai_gpt4o_mini.yaml` as a starting point and review its
+model identifier, revision, and generation settings before running:
 
 ```bash
 cosq run --config configs/experiment/pilot_truthfulqa_open_openai.yaml --allow-dirty
 ```
 
-You can copy `configs/model/openai_template.yaml` and change `id` to another model available in your OpenAI account.
+Credentials are read at runtime and are never part of a resolved experiment
+configuration or a committed result.
 
-## Using Hugging Face Models
+## Caching and offline analysis
 
-Install optional dependencies:
-
-```bash
-pip install -e ".[hf]"
-```
-
-For gated models, set `HF_TOKEN` and accept the model license on Hugging Face. Then copy one of the examples in `configs/model/`, replace `revision` with an immutable Hugging Face commit SHA, and run:
+Pass a SQLite cache to reuse identical completions:
 
 ```bash
-cosq probe --model configs/model/hf_llama3_8b_instruct.yaml
-cosq run --config configs/experiment/pilot_truthfulqa_open.yaml --allow-dirty
+cosq run --config configs/experiment/pilot_truthfulqa_open.yaml \
+  --cache results/cache.sqlite --allow-dirty
 ```
 
-Pinned revisions are required for local Hugging Face models so that a run refers to stable weights.
+The cache is keyed by the model configuration, prompt version, generation
+parameters, and prompt text. Re-running an unchanged condition reuses its raw
+completion rather than calling the provider again. Run artifacts contain the
+resolved configuration, manifest, records, and derived metrics; generated
+results and SQLite databases are intentionally ignored by Git.
 
-## Experiment Configuration
+## Datasets
 
-```yaml
-name: smoke_mock
-model: configs/model/mock.yaml
-data:
-  name: jsonl
-  path: tests/fixtures/mini.jsonl
-  n: 3
-  seed: 1002
-strategies:
-  - name: direct
-  - name: cot
-  - name: cot_abstain
-  - name: cosq
-  - name: cosq_graded_gate
-    label: cosq_graded_gate_mean060
-    threshold: 0.60
-    aggregator: mean
-    on_empty: abstain
-repeats: 1
-open_ended: false
-```
+The package provides adapters for:
 
-## Built-in Strategies
+- `jsonl`: local JSONL datasets for custom experiments;
+- `truthfulqa_mc1`: TruthfulQA multiple-choice evaluation;
+- `nq_short`: short-answer Natural Questions evaluation;
+- `mmlu`: MMLU subject or aggregate evaluation when the optional dataset
+  dependencies are installed.
 
-- `direct`: answer directly.
-- `cot`: reason step by step, then answer.
-- `cot_abstain`: CoT with permission to answer `I don't know`.
-- `cosq`: binary Chain-of-Self-Questioning with a strict conjunctive gate.
-- `cosq_gate`: CoSQ gate followed by CoT-style answer generation.
-- `cosq_graded`: item-level 0-100 confidence scores with thresholding.
-- `cosq_graded_gate`: graded gate followed by CoT-style answer generation.
+For custom data, inspect `src/cosq/data/jsonl.py` and the fixture under
+`tests/fixtures/`. Keep dataset sampling seeds and the sampled question IDs in
+the run manifest so that the statistical unit remains the question.
 
-## Data
-
-CoSQ ships with a tiny JSONL fixture for tests. Benchmark datasets are loaded at runtime or supplied as JSONL files. Local dataset payloads are ignored by git to keep the package lightweight.
-
-A custom JSONL dataset should contain:
-
-```json
-{"id":"q1","question":"What is the capital of France?","options":["Paris","Lyon"],"gold_index":0}
-```
-
-## Caching and Re-scoring
-
-Runs can use a SQLite cache:
+## Development and verification
 
 ```bash
-cosq run --config configs/experiment/pilot_truthfulqa_open_openai.yaml --cache results/cache.sqlite
-```
-
-Raw model outputs are written before scoring. You can improve parsers or metrics and re-run `evaluate`, `analyze`, or `report` without making new model calls.
-
-## Development and PyPI Release
-
-```bash
-pip install -e ".[dev]"
-pytest
-ruff check .
+python -m pytest
+python -m ruff check .
 python -m build
 python -m twine check dist/*
 ```
 
-To publish to PyPI:
+The repository intentionally contains no provider credentials, private
+endpoints, operational secrets, or generated experimental results. Copy
+`.env.example` to `.env` for local credentials and never commit the resulting
+file.
 
-```bash
-python -m build
-python -m twine upload dist/*
-```
-
-## Repository Layout
+## Repository layout
 
 ```text
-src/cosq/
-  backends/       # mock, local Hugging Face, OpenAI API
-  strategies/     # direct, CoT, CoSQ, graded CoSQ variants
-  decision/       # binary and confidence-based gates
-  data/           # dataset adapters
-  eval/           # offline scoring and metrics
-  report/         # tables and statistical summaries
-  prompts/        # versioned prompt templates
-configs/
-  experiment/     # runnable experiment YAML files
-  model/          # model backend examples
-tests/            # no-network test suite
+configs/                 Public experiment and model examples
+docs/                    Method and reproducibility notes
+src/cosq/backends/       Mock, local Hugging Face, and OpenAI backends
+src/cosq/data/           Dataset adapters
+src/cosq/strategies/     Baselines and CoSQ variants
+src/cosq/runner/         Execution, caching, and manifests
+src/cosq/eval/           Metrics and scoring
+src/cosq/report/         Tables and analysis reports
+tests/                   Unit tests and a network-free fixture
 ```
 
-## Citation
+## Citation and links
 
-If you use CoSQ in academic work, please cite the accompanying paper once available. A BibTeX entry will be added after publication.
+- GitHub: <https://github.com/senolali/cosq>
+- PyPI: <https://pypi.org/project/cosq/>
+
+If you use the framework, please cite the accompanying paper and report the
+package version, model revision, dataset version, threshold, and cache policy.
 
 ## License
 
-MIT License.
+CoSQ is released under the MIT License. See [LICENSE](LICENSE).

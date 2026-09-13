@@ -1,8 +1,12 @@
-"""Local Hugging Face backend.
+"""Local Hugging Face backend with mandatory 4-bit quantization.
 
-This backend loads a model with ``transformers`` and returns raw generated text.
-It is optional because it may require large model weights, a GPU, and additional
-packages. Quantization is configurable and recorded in run manifests.
+Not exercised by the test suite — no test may require a GPU or the network — so this
+module is written to fail loudly and specifically rather than silently degrade.
+
+**NF4 is the default, not a fallback.** An 8B model at bfloat16 needs roughly 16 GB
+for weights alone and does not fit the reference 12 GB GPU under any configuration
+[M1]. Quantization also perturbs calibration, which is exactly what CoSQ stage 2
+probes, so the scheme is recorded in the run manifest and reported as a limitation.
 """
 
 from __future__ import annotations
@@ -17,12 +21,21 @@ from cosq.types import Completion, GenerationParams
 if TYPE_CHECKING:
     from cosq.config import ModelConfig
 
-_IMPORT_HINT = "the 'hf_local' backend needs optional dependencies: pip install 'cosq[hf]'"
+_IMPORT_HINT = "the 'hf' backend needs torch and transformers: pip install -e '.[hf]'"
+
+
+def _is_placeholder(revision: str) -> bool:
+    """Return whether a model revision is still the example placeholder."""
+    normalized = revision.strip().lower()
+    return normalized.startswith("replace-with-") or normalized in {
+        "your-commit-sha",
+        "your-model-revision",
+    }
 
 
 @register("backend", "hf_local")
 class HFLocalBackend(LLMBackend):
-    """`transformers` generation against a locally loaded, pinned model."""
+    """`transformers` generation against a locally loaded, pinned, quantized model."""
 
     def __init__(
         self,
@@ -39,7 +52,7 @@ class HFLocalBackend(LLMBackend):
                 f"model revision must be a pinned commit SHA, got {revision!r}. "
                 "A floating branch silently changes what a run means."
             )
-        if revision.startswith("REPLACE") or revision.startswith("TODO") or "COMMIT" in revision.upper():
+        if _is_placeholder(revision):
             raise ValueError(
                 f"revision {revision!r} is still the config template's placeholder. "
                 "Set it to the model's commit SHA before running."

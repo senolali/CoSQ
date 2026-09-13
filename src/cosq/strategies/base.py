@@ -47,10 +47,12 @@ class Strategy(abc.ABC):
         *,
         lang: str = prompts.DEFAULT_LANG,
         open_ended: bool = False,
+        mc_output: bool = False,
     ) -> None:
         self.backend = backend
         self.lang = lang
         self.open_ended = open_ended
+        self.mc_output = mc_output
 
     def prompt_name(self, base: str) -> str:
         """Template for ``base`` under the current presentation mode.
@@ -58,7 +60,9 @@ class Strategy(abc.ABC):
         Open-ended variants are separate files rather than a rewrite of the closed-book
         ones, so every earlier run keeps its exact prompts and stays reproducible.
         """
-        return f"{base}_open" if self.open_ended else base
+        if self.open_ended:
+            return f"{base}_open"
+        return f"{base}_mc" if self.mc_output else base
 
     @abc.abstractmethod
     def answer(self, question: Question, params: GenerationParams, repeat: int = 0) -> AnswerRecord:

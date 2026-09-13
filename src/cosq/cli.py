@@ -80,6 +80,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         cache_path=None if args.no_cache else args.cache,
         backend=backend,
         allow_dirty=args.allow_dirty,
+        max_workers=args.workers,
         progress=None if args.quiet else _progress,
     )
     print(file=sys.stderr)
@@ -253,6 +254,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--backend", help="override the backend, e.g. 'mock'")
     run.add_argument("--results-root", default="results/runs")
     run.add_argument("--cache", default="results/cache.sqlite")
+    run.add_argument("--workers", type=int, default=1, help="parallel question workers")
     run.add_argument("--no-cache", action="store_true")
     run.add_argument("--allow-dirty", action="store_true", help="permit an uncommitted tree")
     run.add_argument("--quiet", action="store_true")

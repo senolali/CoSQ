@@ -1,0 +1,9 @@
+{question_block}
+The following factual claims passed the confidence gate:
+
+{accepted_facts}
+
+Use these claims as evidence, reason briefly, and give the final answer on a line
+beginning with "Answer:". Keep the final answer to one short sentence.
+
+Reasoning:

@@ -78,5 +78,7 @@ def compute_metrics(records: Iterable[ScoredRecord]) -> MetricSet:
         abstention_aware_accuracy=(counts.correct / answered) if answered else float("nan"),
         effective_reliability=(counts.correct - counts.wrong) / n,
         unparseable_rate=counts.unparseable / n,
-        coverage=(n - counts.idk) / n,
+        # Coverage is the fraction of parseable committed answers. Unparseable
+        # outputs remain a separate measurement-failure category.
+        coverage=answered / n,
     )

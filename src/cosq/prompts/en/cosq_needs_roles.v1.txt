@@ -1,0 +1,15 @@
+{question_block}
+Before answering, list the individual pieces of information you would need to answer
+this question correctly. Classify every item as either critical or supporting.
+
+CRITICAL means that without this information, no correct answer is possible.
+SUPPORTING means that the information is helpful but the question could still be
+answered without it.
+
+Use exactly one item per line in this format:
+[CRITICAL] <information needed>
+or
+[SUPPORTING] <information needed>
+
+Do not answer the main question yet.
+Required information:

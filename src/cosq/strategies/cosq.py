@@ -36,9 +36,10 @@ class CoSQStrategy(Strategy):
         rule: DecisionRule | None = None,
         lang: str = prompts.DEFAULT_LANG,
         open_ended: bool = False,
+        mc_output: bool = False,
         unparseable_certainty: Certainty = "uncertain",
     ) -> None:
-        super().__init__(backend, lang=lang, open_ended=open_ended)
+        super().__init__(backend, lang=lang, open_ended=open_ended, mc_output=mc_output)
         self.rule = rule or ThresholdRule(tau=0.0)
         self.unparseable_certainty: Certainty = unparseable_certainty
 

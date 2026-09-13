@@ -1,0 +1,6 @@
+{question_block}
+The following factual claims passed the confidence gate:
+
+{accepted_facts}
+
+Return exactly one token corresponding to one of the option labels shown above, or ABSTAIN. Do not provide reasoning or explanation.

@@ -159,9 +159,11 @@ class ScoredRecord:
 
     @property
     def answered(self) -> bool:
-        """Did the system commit to an answer? ``unparseable`` counts as answered —
-        the model did produce something, we just could not map it."""
-        return self.outcome in ("correct", "wrong", "unparseable")
+        """True when the record contains a parseable committed answer.
+
+        Unparseable output remains a separate measurement-failure category.
+        """
+        return self.outcome in ("correct", "wrong")
 
     def with_outcome(self, outcome: Outcome) -> ScoredRecord:
         return replace(self, outcome=outcome)

@@ -1,31 +1,66 @@
 # CoSQ Methodology Notes
 
-CoSQ evaluates selective factual answering as a risk-coverage problem.
+CoSQ treats factual answering as a selective-prediction problem. The framework
+separates generation, parsing, scoring, and reporting so that a completed run
+can be audited and rescored without contacting a model provider again.
 
-## Core protocol
+## Protocol
 
-1. A strategy receives the same benchmark question under the same model and decoding parameters.
-2. The backend returns raw text only. It never parses, scores, or decides.
-3. The runner writes every raw answer to `records.jsonl` before offline scoring.
-4. Evaluation can be repeated from saved records without re-querying a model.
+1. Every condition receives the same question, model configuration, decoding
+   parameters, and dataset sample.
+2. A backend returns raw text only. It does not parse, score, or decide.
+3. The runner stores raw completions and structured records in the run directory.
+4. The evaluator maps committed answers to correct, wrong, abstained, or
+   unparseable outcomes.
+5. The analyzer produces paired summaries, risk-coverage quantities, and
+   condition-level comparisons.
 
-## Main metrics
+The question is the statistical unit. Repeated conditions are paired on question
+ID, and the resolved configuration records the prompt digest, dataset settings,
+model revision, and generation parameters.
 
-- `answered_accuracy = correct / (correct + wrong)` for parseable committed answers.
-- `coverage = (correct + wrong) / N`.
-- `hallucination_rate = wrong / N`.
-- `abstention_rate = idk / N`.
-- `unparseable` is reported separately as measurement failure.
+## Three-stage CoSQ procedure
 
-Answered accuracy must always be read together with coverage. A system can obtain high answered accuracy by answering only easy questions.
+Stage 1 decomposes the question into the information items required for a
+correct answer. The grounded and adaptive prompts may additionally label items
+as CRITICAL or SUPPORTING.
 
-## CoSQ gates
+Stage 2 asks for a bounded confidence score from 0 to 100 for each item. The
+runner normalizes the score to [0, 1] and retains the original completion and
+parsed values.
 
-Binary CoSQ uses a strict conjunctive gate: every required knowledge item must be judged `Certain`; otherwise the system abstains. Graded CoSQ replaces binary labels with 0-100 item-level confidence scores and compares an aggregate score, usually the mean, against a threshold.
+Stage 3 applies a threshold rule. Grounded-CoSQ uses accepted items and an
+aggregate mean. Critical-CoSQ evaluates the critical subset. Adaptive-CoSQ
+combines role-aware aggregate confidence with critical-item, minimum-confidence,
+and consistency checks. A failed gate produces an abstention; a passed gate
+produces a final answer from the accepted information.
+
+## Metrics
+
+For N questions, let C be correct committed answers, W wrong committed answers,
+and A abstentions:
+
+- AA = C / (C + W) is answered accuracy.
+- Coverage = (C + W) / N.
+- HR = W / N is the unconditional wrong-commitment rate.
+- AR = A / N.
+- R_answered = W / (C + W) = 1 - AA.
+
+Unparseable output is reported separately as measurement failure. It is not
+silently treated as a correct answer, wrong answer, or deliberate abstention.
+
+Coverage is an operating characteristic, not an isolated objective. A
+conservative threshold can intentionally route uncertain questions away from
+answering. The relevant result is the joint HR-AA-coverage profile and its
+behavior across thresholds.
 
 ## Reproducibility
 
-- Prompt templates are versioned under `src/cosq/prompts/`.
-- Config hashes include both experiment configuration and prompt templates.
-- Model outputs are cached in SQLite when `--cache` is enabled.
-- Hosted APIs are treated as unpinned model endpoints unless the provider exposes immutable revisions.
+- Prompt templates are versioned under src/cosq/prompts/.
+- Configuration hashes include the resolved experiment and prompt digest.
+- SQLite caching reuses identical completions and avoids duplicate calls.
+- Run artifacts retain the resolved configuration, manifest, records, metrics,
+  and analysis output.
+- Hugging Face examples require immutable model commit revisions.
+- Provider credentials belong in environment variables or an ignored .env
+  file, never in YAML, source code, or committed run artifacts.

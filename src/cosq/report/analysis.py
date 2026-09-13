@@ -60,10 +60,17 @@ def _wrongness(records: Sequence[ScoredRecord], strategy: str) -> tuple[list[str
 
 def _contrast(records: Sequence[ScoredRecord], treatment: str, baseline: str) -> dict[str, Any]:
     """One paired comparison, reported with every effect measure at once."""
-    _, t_major, t_mean = per_question_success(records, treatment)
-    _, b_major, b_mean = per_question_success(records, baseline)
-    _, t_wrong = _wrongness(records, treatment)
-    _, b_wrong = _wrongness(records, baseline)
+    t_ids, t_major, t_mean = per_question_success(records, treatment)
+    b_ids, b_major, b_mean = per_question_success(records, baseline)
+    tw_ids, t_wrong = _wrongness(records, treatment)
+    bw_ids, b_wrong = _wrongness(records, baseline)
+    expected = set(t_ids)
+    if expected != set(b_ids) or expected != set(tw_ids) or expected != set(bw_ids):
+        raise ValueError(f"cannot pair {treatment!r} with {baseline!r}: question-id sets differ")
+    if not (t_ids == b_ids == tw_ids == bw_ids):
+        raise ValueError(
+            f"cannot pair {treatment!r} with {baseline!r}: question ids are not aligned"
+        )
 
     wrong_t = [value > 0.5 for value in t_wrong]
     wrong_b = [value > 0.5 for value in b_wrong]

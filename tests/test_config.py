@@ -65,18 +65,18 @@ def test_pilot_config_matches_the_public_design():
     assert [s.name for s in config.strategies] == [
         "direct",
         "cot",
-        "cot_abstain",
-        "cosq",
-        "cosq_graded_gate",
+        "cosq_grounded",
+        "cosq_critical_grounded",
+        "cosq_grounded_adaptive",
     ]
     assert config.data.n == 100
     assert config.repeats == 1
     assert config.total_queries() == 500
-    cosq = next(s for s in config.strategies if s.name == "cosq")
-    assert cosq.tau == 0.0
-    graded = next(s for s in config.strategies if s.name == "cosq_graded_gate")
-    assert graded.threshold == 0.60
-    assert graded.aggregator == "mean"
+    for name in ("cosq_grounded", "cosq_critical_grounded", "cosq_grounded_adaptive"):
+        strategy = next(s for s in config.strategies if s.name == name)
+        assert strategy.threshold == 0.90
+        assert strategy.aggregator == "mean"
+    assert config.mc_output is True
 
 
 def test_duplicate_condition_names_are_rejected():

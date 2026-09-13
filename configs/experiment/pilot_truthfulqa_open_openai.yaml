@@ -1,4 +1,4 @@
-name: pilot_truthfulqa_open_openai
+name: pilot_truthfulqa_mc_openai
 model: configs/model/openai_gpt4o_mini.yaml
 data:
   name: truthfulqa_mc1
@@ -7,16 +7,23 @@ data:
 strategies:
   - name: direct
   - name: cot
-  - name: cot_abstain
-  - name: cosq
-    tau: 0.0
+  - name: cosq_grounded
+    label: grounded_mc_mean090
+    threshold: 0.90
+    aggregator: mean
     on_empty: abstain
-  - name: cosq_graded_gate
-    label: cosq_graded_gate_mean060
-    threshold: 0.60
+  - name: cosq_critical_grounded
+    label: critical_mc_mean090
+    threshold: 0.90
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded_adaptive
+    label: adaptive_mc_mean090
+    threshold: 0.90
     aggregator: mean
     on_empty: abstain
 repeats: 1
 seed: 1002
 lang: en
-open_ended: true
+open_ended: false
+mc_output: true

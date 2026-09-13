@@ -1,0 +1,12 @@
+{question_block}
+Accepted factual claims:
+
+{accepted_facts}
+
+Answer mode: {response_mode}
+Use the claims as evidence and do not contradict them. You may use general reasoning.
+Give the final answer on a line beginning with "Answer:" and keep it to one short sentence.
+For cautious mode, briefly signal uncertainty without refusing if the evidence supports
+a useful answer.
+
+Reasoning:

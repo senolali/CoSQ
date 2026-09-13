@@ -1,0 +1,12 @@
+{question_block}
+Consider this information need:
+
+{need}
+
+State the factual claim you would rely on. Mark whether it is critical or supporting,
+then give confidence from 0 to 100.
+Use exactly this format:
+ROLE: critical or supporting
+FACT: <one concise factual claim>
+CONFIDENCE: <0-100>
+Do not answer the main question yet.

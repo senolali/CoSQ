@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import random
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -95,6 +96,7 @@ def run_experiment(
     cache_path: str | Path | None = "results/cache.sqlite",
     backend: Any = None,
     allow_dirty: bool = False,
+    max_workers: int = 1,
     progress: ProgressFn | None = None,
 ) -> RunResult:
     """Execute the full grid and persist everything.
@@ -114,6 +116,8 @@ def run_experiment(
         )
 
     seed_everything(config.seed)
+    if max_workers < 1:
+        raise ValueError("max_workers must be at least 1")
     dataset = config.data.build()
     all_questions = dataset.load()
     questions, ids_sha256 = sample_questions(all_questions, config.data.n, config.data.seed)
@@ -156,18 +160,36 @@ def run_experiment(
             for repeat in range(config.repeats):
                 caching = CachingBackend(raw_backend, cache, repeat=repeat)
                 for strategy_cfg in config.strategies:
-                    strategy = strategy_cfg.build(caching, open_ended=config.open_ended)
-                    for question in questions:
-                        record = strategy.answer(question, params, repeat=repeat)
-                        # The class name is not the condition name: one experiment may
-                        # run the same strategy under several settings.
-                        record.strategy = strategy_cfg.condition
-                        records.append(record)
-                        sink.write(_record_to_json(record) + "\n")
-                        sink.flush()
-                        done += 1
-                        if progress is not None:
-                            progress(done, total, f"{strategy_cfg.condition}/{question.id}")
+                    strategy = strategy_cfg.build(
+                        caching, open_ended=config.open_ended, mc_output=config.mc_output
+                    )
+                    pool = None
+                    if max_workers == 1:
+                        completed = (
+                            strategy.answer(question, params, repeat=repeat)
+                            for question in questions
+                        )
+                    else:
+                        pool = ThreadPoolExecutor(max_workers=max_workers)
+                        futures = [
+                            pool.submit(strategy.answer, question, params, repeat)
+                            for question in questions
+                        ]
+                        completed = (future.result() for future in futures)
+                    try:
+                        for question, record in zip(questions, completed, strict=True):
+                            # The class name is not the condition name: one experiment may
+                            # run the same strategy under several settings.
+                            record.strategy = strategy_cfg.condition
+                            records.append(record)
+                            sink.write(_record_to_json(record) + "\n")
+                            sink.flush()
+                            done += 1
+                            if progress is not None:
+                                progress(done, total, f"{strategy_cfg.condition}/{question.id}")
+                    finally:
+                        if pool is not None:
+                            pool.shutdown(wait=True)
 
         hits, misses = cache.hits, cache.misses
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +46,8 @@ class CompletionCache:
             self._conn: sqlite3.Connection | None = None
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self.path))
+        self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
+        self._lock = threading.RLock()
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS completions ("
             "  key TEXT PRIMARY KEY,"
@@ -58,11 +60,16 @@ class CompletionCache:
     def get(self, key: str) -> Completion | None:
         if self._conn is None:
             return None
-        row = self._conn.execute("SELECT payload FROM completions WHERE key = ?", (key,)).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT payload FROM completions WHERE key = ?", (key,)
+            ).fetchone()
         if row is None:
-            self.misses += 1
+            with self._lock:
+                self.misses += 1
             return None
-        self.hits += 1
+        with self._lock:
+            self.hits += 1
         data: dict[str, Any] = json.loads(row[0])
         return Completion(
             text=data["text"],
@@ -93,10 +100,11 @@ class CompletionCache:
                 "cost_usd": completion.cost_usd,
             }
         )
-        self._conn.execute(
-            "INSERT OR REPLACE INTO completions (key, payload) VALUES (?, ?)", (key, payload)
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO completions (key, payload) VALUES (?, ?)", (key, payload)
+            )
+            self._conn.commit()
 
     def close(self) -> None:
         if self._conn is not None:

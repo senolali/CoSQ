@@ -1,0 +1,9 @@
+{question_block}
+Accepted factual claims:
+{accepted_facts}
+
+Candidate answer:
+{answer}
+
+Does the candidate answer contradict any accepted factual claim?
+Reply with exactly one word: CONSISTENT or CONTRADICTORY.

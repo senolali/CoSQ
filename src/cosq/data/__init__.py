@@ -2,10 +2,12 @@
 
 from cosq.data.base import DatasetAdapter, sample_questions
 from cosq.data.jsonl import JsonlDataset
+from cosq.data.mmlu import MMLU
 from cosq.data.natural_questions import NaturalQuestionsShort
 from cosq.data.truthfulqa import TruthfulQAMC1
 
 __all__ = [
+    "MMLU",
     "DatasetAdapter",
     "JsonlDataset",
     "NaturalQuestionsShort",

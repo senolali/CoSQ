@@ -40,6 +40,7 @@ class _SinglePrompt(Strategy):
             record.decision = "abstain"
         record.meta["allows_abstention"] = self.allows_abstention
         record.meta["open_ended"] = self.open_ended
+        record.meta["mc_output"] = self.mc_output
         return record
 
 

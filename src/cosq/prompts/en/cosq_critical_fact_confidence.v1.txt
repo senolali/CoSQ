@@ -1,0 +1,10 @@
+{question_block}
+This is a critical information need:
+
+{need}
+
+State the factual claim you would rely on and give your confidence in that claim.
+Use exactly this format:
+FACT: <one concise factual claim>
+CONFIDENCE: <0-100>
+Do not answer the main question yet.

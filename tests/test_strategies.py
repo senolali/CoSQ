@@ -15,6 +15,9 @@ def test_every_condition_is_registered():
         "cosq_gate",  # stage-3 ablation [M19]
         "cosq_graded",  # graded confidence instead of a conjunction [M20]
         "cosq_graded_gate",
+        "cosq_grounded",
+        "cosq_grounded_adaptive",
+        "cosq_critical_grounded",
     }
 
 

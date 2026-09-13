@@ -94,22 +94,33 @@ class StrategyConfig:
         """The label this configuration is reported under."""
         return self.label or self.name
 
-    def build(self, backend: LLMBackend, *, open_ended: bool = False) -> Strategy:
+    def build(
+        self, backend: LLMBackend, *, open_ended: bool = False, mc_output: bool = False
+    ) -> Strategy:
         from cosq.decision.threshold import EmptyPolicy, ThresholdRule
         from cosq.registry import resolve
 
         strategy_cls = resolve("strategy", self.name)
-        if self.name in ("cosq_graded", "cosq_graded_gate"):
+        if self.name in (
+            "cosq_graded",
+            "cosq_graded_gate",
+            "cosq_grounded",
+            "cosq_grounded_adaptive",
+            "cosq_critical_grounded",
+        ):
             from cosq.decision.confidence import ConfidenceRule
 
             graded = ConfidenceRule(
                 threshold=self.threshold, aggregator=self.aggregator, on_empty=self.on_empty
             )
-            return cast("Strategy", strategy_cls(backend, rule=graded, open_ended=open_ended))
+            kwargs = {"rule": graded, "open_ended": open_ended}
+            if self.name in ("cosq_grounded", "cosq_grounded_adaptive", "cosq_critical_grounded"):
+                kwargs["mc_output"] = mc_output
+            return cast("Strategy", strategy_cls(backend, **kwargs))
         if self.name in ("cosq", "cosq_gate"):
             rule = ThresholdRule(tau=self.tau, on_empty=cast("EmptyPolicy", self.on_empty))
             return cast("Strategy", strategy_cls(backend, rule=rule, open_ended=open_ended))
-        return cast("Strategy", strategy_cls(backend, open_ended=open_ended))
+        return cast("Strategy", strategy_cls(backend, open_ended=open_ended, mc_output=mc_output))
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +158,7 @@ class ExperimentConfig:
     #: mixing the two presentations would confound condition with task difficulty, so
     #: it is not expressible [M22].
     open_ended: bool = False
+    mc_output: bool = False
 
     @classmethod
     def from_mapping(cls, mapping: dict[str, Any]) -> ExperimentConfig:

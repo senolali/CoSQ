@@ -10,6 +10,7 @@ import unicodedata
 #: hedging ("I think", "probably") is *not* abstention, because counting hedges as
 #: abstention would inflate AR and flatter the method.
 ABSTENTION_MARKERS: tuple[str, ...] = (
+    "abstain",
     "i don't know",
     "i do not know",
     "i dont know",

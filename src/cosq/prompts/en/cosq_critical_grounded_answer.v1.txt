@@ -1,0 +1,9 @@
+{question_block}
+The following critical factual claims passed the confidence gate:
+
+{accepted_facts}
+
+Use these claims as evidence and do not contradict them. You may use general reasoning.
+Give the final answer on a line beginning with "Answer:" and keep it to one short sentence.
+
+Reasoning:

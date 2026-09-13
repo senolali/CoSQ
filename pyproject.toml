@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cosq"
-version = "0.1.0"
-description = "Chain-of-Self-Questioning for selective factual answering with LLMs"
+version = "0.2.0"
+description = "Chain-of-Self-Questioning for selective risk control and abstention in LLMs"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [{ name = "Ali Senol", email = "alisenol@tarsus.edu.tr" }]
-keywords = ["llm", "hallucination", "abstention", "selective-prediction", "question-answering"]
+keywords = ["llm", "hallucination", "abstention", "selective-prediction", "risk-coverage", "question-answering"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3.10",
@@ -34,6 +34,7 @@ cosq = "cosq.cli:main"
 Homepage = "https://github.com/senolali/cosq"
 Repository = "https://github.com/senolali/cosq"
 Issues = "https://github.com/senolali/cosq/issues"
+Documentation = "https://github.com/senolali/cosq#readme"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cosq"]
