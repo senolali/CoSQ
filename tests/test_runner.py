@@ -49,6 +49,9 @@ def test_manifest_records_what_a_replication_needs(tmp_path):
     assert manifest["seed"] == 1002
     assert manifest["dataset"]["n"] == 4
     assert len(manifest["dataset"]["ids_sha256"]) == 64
+    assert manifest["dataset"]["option_order"] == "source"
+    assert manifest["dataset"]["option_seed"] is None
+    assert len(manifest["dataset"]["options_sha256"]) == 64
     assert manifest["config_hash"]
     assert manifest["prompts_digest"]
     assert "python" in manifest["env"]

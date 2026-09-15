@@ -1,0 +1,95 @@
+# Paper protocol: 817 questions, two forced-choice baselines, and three CoSQ
+# variants evaluated at five confidence thresholds (17 conditions in total).
+name: paper_truthfulqa_mc
+model: configs/model/hf_llama3_8b_instruct.yaml
+data:
+  name: truthfulqa_mc1
+  n: 817
+  seed: 1002
+  option_order: balanced
+  option_seed: 1002
+strategies:
+  - name: direct
+    label: direct_mc
+  - name: cot
+    label: cot_mc
+  - name: cosq_grounded
+    label: grounded_mc_mean050
+    threshold: 0.50
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded
+    label: grounded_mc_mean060
+    threshold: 0.60
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded
+    label: grounded_mc_mean070
+    threshold: 0.70
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded
+    label: grounded_mc_mean080
+    threshold: 0.80
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded
+    label: grounded_mc_mean090
+    threshold: 0.90
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_critical_grounded
+    label: critical_mc_mean050
+    threshold: 0.50
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_critical_grounded
+    label: critical_mc_mean060
+    threshold: 0.60
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_critical_grounded
+    label: critical_mc_mean070
+    threshold: 0.70
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_critical_grounded
+    label: critical_mc_mean080
+    threshold: 0.80
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_critical_grounded
+    label: critical_mc_mean090
+    threshold: 0.90
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded_adaptive
+    label: adaptive_mc_mean050
+    threshold: 0.50
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded_adaptive
+    label: adaptive_mc_mean060
+    threshold: 0.60
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded_adaptive
+    label: adaptive_mc_mean070
+    threshold: 0.70
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded_adaptive
+    label: adaptive_mc_mean080
+    threshold: 0.80
+    aggregator: mean
+    on_empty: abstain
+  - name: cosq_grounded_adaptive
+    label: adaptive_mc_mean090
+    threshold: 0.90
+    aggregator: mean
+    on_empty: abstain
+repeats: 1
+seed: 1002
+lang: en
+open_ended: false
+mc_output: true

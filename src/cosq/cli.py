@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -20,10 +21,16 @@ def _progress(done: int, total: int, label: str) -> None:
 
 
 def _load_questions(config: ExperimentConfig) -> dict[str, Any]:
-    from cosq.data.base import sample_questions
+    from cosq.data.base import prepare_questions
 
     questions = config.data.build().load()
-    sample, _ = sample_questions(questions, config.data.n, config.data.seed)
+    sample, _, _ = prepare_questions(
+        questions,
+        config.data.n,
+        config.data.seed,
+        option_order=config.data.option_order,
+        option_seed=config.data.option_seed,
+    )
     return {question.id: question for question in sample}
 
 
@@ -60,9 +67,12 @@ def cmd_ask(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    from cosq.config import ModelConfig, load_yaml
     from cosq.runner import run_experiment
 
     config = ExperimentConfig.load(args.config)
+    if args.model:
+        config = replace(config, model=ModelConfig.from_mapping(load_yaml(args.model)))
     backend = None
     if args.backend:
         from cosq.backends import load_backend
@@ -251,6 +261,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = sub.add_parser("run", help="execute an experiment")
     run.add_argument("--config", required=True)
+    run.add_argument("--model", help="override the model config referenced by the experiment")
     run.add_argument("--backend", help="override the backend, e.g. 'mock'")
     run.add_argument("--results-root", default="results/runs")
     run.add_argument("--cache", default="results/cache.sqlite")

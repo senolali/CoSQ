@@ -70,6 +70,8 @@ def test_pilot_config_matches_the_public_design():
         "cosq_grounded_adaptive",
     ]
     assert config.data.n == 100
+    assert config.data.option_order == "balanced"
+    assert config.data.option_seed == 1002
     assert config.repeats == 1
     assert config.total_queries() == 500
     for name in ("cosq_grounded", "cosq_critical_grounded", "cosq_grounded_adaptive"):
@@ -77,6 +79,35 @@ def test_pilot_config_matches_the_public_design():
         assert strategy.threshold == 0.90
         assert strategy.aggregator == "mean"
     assert config.mc_output is True
+
+
+def test_paper_config_matches_the_reported_17_condition_protocol():
+    config = ExperimentConfig.load("configs/experiment/paper_truthfulqa_mc.yaml")
+    assert config.data.n == 817
+    assert config.data.option_order == "balanced"
+    assert config.data.option_seed == 1002
+    assert config.repeats == 1
+    assert config.total_queries() == 817 * 17
+
+    conditions = [strategy.condition for strategy in config.strategies]
+    assert conditions[:2] == ["direct_mc", "cot_mc"]
+    for prefix in ("grounded", "critical", "adaptive"):
+        assert [f"{prefix}_mc_mean{threshold:03d}" for threshold in range(50, 100, 10)] == [
+            condition for condition in conditions if condition.startswith(prefix)
+        ]
+
+
+def test_invalid_option_order_is_rejected():
+    with pytest.raises(ValueError, match="option_order"):
+        _config(
+            data={
+                "name": "jsonl",
+                "path": "tests/fixtures/mini.jsonl",
+                "n": 3,
+                "seed": 1,
+                "option_order": "random-ish",
+            }
+        )
 
 
 def test_duplicate_condition_names_are_rejected():

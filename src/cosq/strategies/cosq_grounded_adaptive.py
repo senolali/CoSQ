@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import TypedDict
 
 from cosq import prompts
 from cosq.backends.base import LLMBackend
@@ -14,6 +15,12 @@ from cosq.strategies.base import render_question
 from cosq.types import AnswerRecord, GenerationParams, Question
 
 _FIELD = re.compile(r"^\s*(ROLE|FACT|CONFIDENCE)\s*:\s*(.*?)\s*$", re.I | re.M)
+
+
+class _Claim(TypedDict):
+    role: str
+    fact: str
+    confidence: float
 
 
 @register("strategy", "cosq_grounded_adaptive")
@@ -75,7 +82,8 @@ class CoSQGroundedAdaptiveStrategy:
             record,
         )
         record.needs = parse_need_list(needs)
-        claims: list[dict[str, object]] = []
+        claims: list[_Claim] = []
+        unreadable = 0
         for index, need in enumerate(record.needs):
             reply = self._ask(
                 f"fact_confidence[{index}]",
@@ -92,8 +100,13 @@ class CoSQGroundedAdaptiveStrategy:
                 else "supporting"
             )
             fact = fields.get("FACT", "")
-            confidence = parse_confidence(fields.get("CONFIDENCE", reply))
+            confidence = (
+                parse_confidence(fields["CONFIDENCE"])
+                if "CONFIDENCE" in fields
+                else None
+            )
             if confidence is None:
+                unreadable += 1
                 confidence = self.unparseable_confidence
             claims.append({"role": role, "fact": fact, "confidence": confidence})
             record.certainties.append(
@@ -127,6 +140,7 @@ class CoSQGroundedAdaptiveStrategy:
                 "critical_min": self.minimum_critical,
             },
             response_mode=mode,
+            unparseable_confidences=unreadable,
             open_ended=self.open_ended,
         )
         if not passes:

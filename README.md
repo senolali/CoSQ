@@ -2,121 +2,155 @@
 
 [![PyPI](https://img.shields.io/pypi/v/cosq.svg)](https://pypi.org/project/cosq/)
 [![Python](https://img.shields.io/pypi/pyversions/cosq.svg)](https://pypi.org/project/cosq/)
-[![Tests](https://github.com/senolali/cosq/actions/workflows/ci.yml/badge.svg)](https://github.com/senolali/cosq/actions)
+[![CI](https://github.com/senolali/CoSQ/actions/workflows/ci.yml/badge.svg)](https://github.com/senolali/CoSQ/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-CoSQ is a reproducible framework for **selective factual answering**. Before an
-LLM commits to an answer, it decomposes the question into required information,
-estimates confidence for each item, and either produces an answer or abstains.
-The goal is not to answer every question. It is to make answer commitment an
-explicit, measurable risk-control decision.
+CoSQ is a reproducible framework for **selective factual answering** with large
+language models. Before committing to an answer, the model decomposes the
+question into required information, evaluates item-level confidence, and either
+answers from accepted facts or abstains. The aim is not maximum answer volume;
+it is explicit, measurable control over when a model should answer.
 
-This repository is the public research release accompanying:
+This repository accompanies:
 
-> **When Should LLMs Abstain? Chain-of-Self-Questioning for Selective Risk Control**
+> **When Should Large Language Models Abstain? Chain-of-Self-Questioning for
+> Selective Risk Control**
+
+The paper has been submitted to arXiv. Its temporary identifier in this release
+is `arXiv:xxxx.xxxx` and will be replaced when moderation is complete.
 
 ## Why CoSQ?
 
-In high-consequence settings, an incorrect answer can be more harmful than a
-referral. A clinical decision-support system, for example, should sometimes
-direct a case to a specialist rather than present an unsupported answer with
-unwarranted confidence. CoSQ makes that behavior inspectable and tunable through
-the standard risk-coverage perspective used in selective prediction.
+In high-consequence settings, a confident wrong answer may be more harmful than
+a referral. A clinical decision-support system, for example, should route a
+case to a specialist when the evidence needed to answer is uncertain. CoSQ
+turns this behavior into a tunable operating policy and reports the resulting
+answered accuracy, coverage, and unconditional wrong-commitment rate together.
 
 ## Method
 
-CoSQ has three stages:
+CoSQ separates model calls, parsing, decisions, scoring, and reporting:
 
-1. **Information decomposition.** The model lists the facts needed to answer the
-   question correctly. Grounded and adaptive variants also assign a role to each
-   item, such as `CRITICAL` or `SUPPORTING`.
-2. **Item-level confidence.** The model gives a confidence score from 0 to 100
-   for each item. Scores are normalized to the interval `[0, 1]` by the runner.
-3. **Selective commitment.** A decision rule aggregates the item scores. If the
-   gate passes, the model answers using the accepted information; otherwise the
-   system returns an explicit abstention.
+1. **Information decomposition.** The model lists the information needed to
+   answer the question. Role-aware variants distinguish `CRITICAL` from
+   `SUPPORTING` information.
+2. **Grounded confidence.** For each item, the model generates a factual claim
+   and a confidence score from 0 to 100. Structured parsers read only labelled
+   fields and retain the raw completion for audit.
+3. **Selective commitment.** A decision rule evaluates the item scores. If the
+   gate passes, the model answers from threshold-accepted facts; otherwise it
+   returns an explicit abstention.
 
-The public implementation keeps raw completions and parsed records separate so
-that scoring and analysis can be repeated without making another model call.
+### Implemented variants
 
-### CoSQ variants
+- **Grounded-CoSQ** applies an aggregate confidence gate to all required items
+  and conditions the final answer on accepted facts.
+- **Critical-CoSQ** asks which items are indispensable and applies the gate to
+  that critical subset.
+- **Adaptive-CoSQ** combines overall confidence, critical-item mean and minimum
+  checks, response mode selection, and a final contradiction check.
 
-- **Grounded-CoSQ** answers from information items whose confidence passes the
-  threshold. The gate uses the mean confidence of the accepted items.
-- **Critical-CoSQ** asks the model to distinguish critical from supporting
-  information and applies the gate to the critical items.
-- **Adaptive-CoSQ** combines role-aware aggregate confidence with critical-item,
-  minimum-confidence, and consistency checks. It is intended as a flexible
-  operating policy when different questions require different amounts of
-  information.
+The package also provides Direct and CoT controls, plus an optional
+abstention-aware CoT strategy. In the paper protocol, Direct and CoT are genuine
+forced-choice controls: they are not offered abstention, and malformed output is
+scored as wrong.
 
-The baselines included in the package are direct answering, chain-of-thought
-answering, and abstention-aware chain-of-thought answering. Prompts are versioned
-text resources shipped with the package.
+## Paper protocol and results
 
-## Metrics
+The primary experiment uses all 817 TruthfulQA-MC1 questions, 11 models,
+balanced correct-option positions (seed 1002), and 17 conditions: Direct, CoT,
+and the three CoSQ variants at mean-confidence thresholds from 0.50 to 0.90.
+The exact option presentation is hashed into every run manifest.
 
-Let `N` be the number of questions, `C` correct committed answers, `W` wrong
-committed answers, and `A` abstentions.
+Macro means across the 11-model panel at the principal 0.90 operating point:
 
-| Metric | Definition | Interpretation |
-| --- | --- | --- |
-| Answered accuracy (AA) | `C / (C + W)` | Accuracy among committed answers |
-| Coverage | `(C + W) / N` | Fraction of questions answered |
-| Hallucination rate (HR) | `W / N` | Unconditional wrong-commitment rate |
-| Abstention rate (AR) | `A / N` | Fraction routed away from answering |
-| Answered risk | `W / (C + W) = 1 - AA` | Error rate conditional on commitment |
+| Condition | Answered accuracy | Coverage | Wrong-commitment rate |
+| --- | ---: | ---: | ---: |
+| Direct | 0.872 | 1.000 | 0.128 |
+| CoT | 0.869 | 1.000 | 0.131 |
+| Grounded-CoSQ | **0.897** | 0.876 | 0.089 |
+| Critical-CoSQ | 0.896 | **0.886** | 0.092 |
+| Adaptive-CoSQ | 0.896 | 0.865 | **0.089** |
 
-Coverage is reported as an operating characteristic, not as a standalone
-objective. A conservative system can deliberately answer fewer questions when
-wrong answers carry a high downstream cost. The useful comparison is the joint
-behavior of HR, AA, and coverage across thresholds.
+Compared with CoT, Grounded-CoSQ reduced the unconditional wrong-commitment
+rate by 0.042 and increased answered accuracy by 0.029 on average; all 11 models
+moved in the expected direction in both paired comparisons. Coverage is an
+operating characteristic rather than a failure measure: an abstention is the
+intended action when evidence is insufficient.
 
-Unparseable outputs are tracked separately as a measurement-quality indicator.
-They are not silently counted as correct or wrong answers.
+The 300-question, five-model NQ-Short panel provides a secondary open-answer
+generalization check. Grounded-CoSQ increased mean answered accuracy from 0.588
+for CoT to 0.670 while routing 17.0% of questions to abstention.
+
+Aggregate tables and reproducible figure generation are under [`paper/`](paper/README.md).
+
+![TruthfulQA risk-coverage operating points](paper/figures/truthfulqa_risk_coverage.svg)
 
 ## Installation
 
-From PyPI:
+### PyPI
+
+CoSQ requires Python 3.10 or newer:
 
 ```bash
-python -m pip install cosq
+python -m pip install --upgrade cosq
+cosq --version
+cosq list
 ```
 
-From source, including development tools:
+The installed package can be tested immediately without an API key:
 
 ```bash
-git clone https://github.com/senolali/cosq.git
-cd cosq
+cosq ask "Which planet is known as the Red Planet?" --model mock --option Earth --option Mars --option Venus
+```
+
+### Source checkout
+
+Clone the repository to obtain the paper configurations, tests, and figure
+scripts:
+
+```bash
+git clone https://github.com/senolali/CoSQ.git
+cd CoSQ
 python -m venv .venv
+```
 
-# Windows
-.venv\\Scripts\\activate
+Activate the environment:
 
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
+
+```bash
 # macOS/Linux
-# source .venv/bin/activate
+source .venv/bin/activate
+```
 
+Install the framework and development tools:
+
+```bash
 python -m pip install -e ".[dev]"
 ```
 
-Optional model integrations:
+Optional integrations are installed only when needed:
 
 ```bash
-python -m pip install -e ".[hf]"      # local Hugging Face models
-python -m pip install -e ".[openai]"  # OpenAI API models
+python -m pip install -e ".[hf]"      # local Hugging Face inference and datasets
+python -m pip install -e ".[openai]"  # OpenAI API integration
+python -m pip install -e ".[paper]"   # regenerate public paper figures
 ```
 
-## Quick start without an API
+## Network-free end-to-end test
 
-The mock backend exercises the complete runner, cache, evaluator, analyzer, and
-reporting path without a network request or model credential:
+The mock backend exercises execution, caching, evaluation, analysis, and report
+generation without a network request or model credential:
 
 ```bash
-cosq run --config configs/experiment/smoke_mock.yaml --backend mock --allow-dirty
+cosq run --config configs/experiment/smoke_mock.yaml --backend mock
 ```
 
-The command prints the generated run directory. Use that directory for offline
-evaluation and reporting:
+The command prints a run directory. Use it for offline processing:
 
 ```bash
 cosq evaluate results/runs/<RUN_DIR>
@@ -124,141 +158,165 @@ cosq analyze results/runs/<RUN_DIR>
 cosq report results/runs/<RUN_DIR>
 ```
 
-Run `cosq --help` and `cosq <command> --help` for the complete CLI reference.
+Run `cosq --help` or `cosq <command> --help` for all CLI options.
 
-## Running a local Hugging Face model
+## Run the paper protocol
 
-Edit a model file under `configs/model/` and replace the placeholder revision
-with an immutable Hugging Face commit SHA. This makes the experiment traceable
-and avoids silently changing model weights. For example:
+First configure a model. Public examples are in [`configs/model/`](configs/model/).
+The Hugging Face examples require an immutable model revision; API credentials
+belong in environment variables or an ignored `.env` file.
+
+Probe the selected model before starting a campaign:
+
+```bash
+cosq probe --model configs/model/openai_template.yaml
+```
+
+Run the 30-question protocol check:
+
+```bash
+cosq run --config configs/experiment/pilot_truthfulqa_mc.yaml --model configs/model/openai_template.yaml --cache results/cache.sqlite --workers 4
+```
+
+Run the complete 817-question, 17-condition protocol after validating the pilot:
+
+```bash
+cosq run --config configs/experiment/paper_truthfulqa_mc.yaml --model configs/model/openai_template.yaml --cache results/cache.sqlite --workers 4
+```
+
+Use a worker count appropriate for the model host and its rate limits. Local GPU
+inference commonly performs best with one worker. Add `--allow-dirty` only when
+you intentionally run from a checkout with uncommitted protocol changes; the
+manifest records that state.
+
+## Balanced option positions
+
+Generative multiple-choice evaluation is vulnerable to label-position bias. Set
+the following in an experiment configuration:
 
 ```yaml
-id: meta-llama/Meta-Llama-3-8B-Instruct
-revision: "REPLACE-WITH-HUGGINGFACE-COMMIT-SHA"
-backend: hf_local
-quantization: nf4
-compute_dtype: bfloat16
-generation:
-  temperature: 0.0
-  top_p: 0.95
-  max_new_tokens: 256
+data:
+  name: truthfulqa_mc1
+  n: 817
   seed: 1002
-backend_params:
-  device_map: auto
-  trust_remote_code: false
+  option_order: balanced
+  option_seed: 1002
 ```
 
-Set `HF_TOKEN` only when the selected model is gated. Then run the public
-experiment template:
-
-```bash
-cosq run --config configs/experiment/pilot_truthfulqa_open.yaml --allow-dirty
-```
-
-The example uses TruthfulQA MC1 and includes direct, CoT, Grounded-CoSQ,
-Critical-CoSQ, and Adaptive-CoSQ conditions at the illustrative `0.90`
-threshold. For a publication-scale study, define the full threshold sweep in a
-separate configuration and record the resolved YAML with the run.
-
-## Running an OpenAI API model
-
-Set the provider credential in the process environment or in a local `.env`
-file, which is ignored by Git:
-
-```bash
-# Windows PowerShell
-$env:OPENAI_API_KEY = "your-key"
-
-# macOS/Linux
-# export OPENAI_API_KEY=your-key
-```
-
-Use `configs/model/openai_gpt4o_mini.yaml` as a starting point and review its
-model identifier, revision, and generation settings before running:
-
-```bash
-cosq run --config configs/experiment/pilot_truthfulqa_open_openai.yaml --allow-dirty
-```
-
-Credentials are read at runtime and are never part of a resolved experiment
-configuration or a committed result.
+CoSQ deterministically permutes the options while preserving the gold content,
+balances the correct label separately for each option count, and stores both
+`ids_sha256` and `options_sha256` in `manifest.json`. A sufficiently large
+multiple-choice run with a degenerate answer-position key is rejected before
+inference starts.
 
 ## Caching and offline analysis
 
-Pass a SQLite cache to reuse identical completions:
+Identical model calls are cached in SQLite:
 
 ```bash
-cosq run --config configs/experiment/pilot_truthfulqa_open.yaml \
-  --cache results/cache.sqlite --allow-dirty
+cosq run --config configs/experiment/pilot_truthfulqa_mc.yaml --model configs/model/openai_template.yaml --cache results/cache.sqlite
 ```
 
-The cache is keyed by the model configuration, prompt version, generation
-parameters, and prompt text. Re-running an unchanged condition reuses its raw
-completion rather than calling the provider again. Run artifacts contain the
-resolved configuration, manifest, records, and derived metrics; generated
-results and SQLite databases are intentionally ignored by Git.
+The cache key includes model identity, model revision, generation parameters,
+prompt text, and repeat. Re-running an unchanged protocol reuses the raw
+completion. Changing option order changes the prompt and therefore correctly
+creates a different cache entry.
 
-## Datasets
+Each run stores:
 
-The package provides adapters for:
+- `config.resolved.yaml`: exact resolved protocol;
+- `manifest.json`: model, environment, Git state, prompt digest, dataset ID hash,
+  and option-presentation hash;
+- `records.jsonl`: raw prompts, completions, parsed decisions, and traces;
+- `metrics.json` and `stats.json`: generated by offline evaluation and analysis.
 
-- `jsonl`: local JSONL datasets for custom experiments;
-- `truthfulqa_mc1`: TruthfulQA multiple-choice evaluation;
-- `nq_short`: short-answer Natural Questions evaluation;
-- `mmlu`: MMLU subject or aggregate evaluation when the optional dataset
-  dependencies are installed.
+## Metrics
 
-For custom data, inspect `src/cosq/data/jsonl.py` and the fixture under
-`tests/fixtures/`. Keep dataset sampling seeds and the sampled question IDs in
-the run manifest so that the statistical unit remains the question.
+For `N` questions, `C` correct commitments, `W` wrong commitments, and `A`
+abstentions:
 
-## Development and verification
+| Metric | Definition | Interpretation |
+| --- | --- | --- |
+| Answered accuracy (AA) | `C / (C + W)` | Accuracy among committed answers |
+| Coverage | `(C + W) / N` | Fraction answered |
+| Wrong-commitment rate (HR) | `W / N` | Unconditional rate of wrong answers |
+| Abstention rate (AR) | `A / N` | Fraction routed away from answering |
+| Answered risk | `W / (C + W)` | Error conditional on commitment; `1 - AA` |
+
+Unparseable output is reported separately. For the forced-choice Direct and CoT
+controls, output that violates the one-label contract is counted as wrong rather
+than as an implicit abstention.
+
+## Supported data adapters
+
+- `truthfulqa_mc1`: TruthfulQA MC1, generation-then-match scoring;
+- `nq_short`: short-answer Natural Questions;
+- `mmlu`: MMLU subject or aggregate evaluation;
+- `jsonl`: local custom datasets.
+
+The optional `datasets` dependency downloads public benchmark data when a local
+cache is absent. Dataset sampling is seeded, and the sampled question IDs are
+hashed in the manifest.
+
+## Reproduce the public figures
+
+```bash
+python -m pip install -e ".[paper]"
+python scripts/plot_paper_results.py
+```
+
+The script reads only committed CSV files and writes SVG and PDF figures to
+`paper/figures/`. No model call is made.
+
+## Development
 
 ```bash
 python -m pytest
 python -m ruff check .
+python -m mypy
 python -m build
 python -m twine check dist/*
 ```
 
-The repository intentionally contains no provider credentials, private
-endpoints, operational secrets, or generated experimental results. Copy
-`.env.example` to `.env` for local credentials and never commit the resulting
-file.
+The repository contains no provider credentials, private endpoints, response
+caches, or provider-specific operational configuration. Copy [`.env.example`](.env.example)
+to `.env` for local credentials and never commit that file.
 
-## Maintainer release workflow
+## PyPI release through GitHub Actions
 
-PyPI releases are published through GitHub Actions using PyPI Trusted
-Publishing. No long-lived PyPI token is stored in the repository or in GitHub
-secrets. To publish a release, configure the repository as a trusted publisher
-for the `cosq` project on PyPI, using owner `senolali`, repository `CoSQ`, and
-workflow file `.github/workflows/publish.yml`. Then either publish a GitHub
-Release or start the `Publish package to PyPI` workflow manually. The package
-version is read from `pyproject.toml`; update it before publishing a new
-release.
+Releases use PyPI Trusted Publishing; no long-lived PyPI token is required.
 
-## Repository layout
+1. Update the version in `pyproject.toml` and `src/cosq/__init__.py`.
+2. Run the development checks above and push the commit.
+3. On GitHub, open **Actions > Publish package to PyPI > Run workflow**.
+4. The workflow runs tests and linting, builds both distributions, validates
+   them with Twine, and publishes through the configured trusted publisher.
 
-```text
-configs/                 Public experiment and model examples
-docs/                    Method and reproducibility notes
-src/cosq/backends/       Mock, local Hugging Face, and OpenAI backends
-src/cosq/data/           Dataset adapters
-src/cosq/strategies/     Baselines and CoSQ variants
-src/cosq/runner/         Execution, caching, and manifests
-src/cosq/eval/           Metrics and scoring
-src/cosq/report/         Tables and analysis reports
-tests/                   Unit tests and a network-free fixture
+The PyPI publisher must use owner `senolali`, repository `CoSQ`, and workflow
+`publish.yml`. Leave the environment field empty unless the workflow is later
+changed to use a named GitHub environment.
+
+## Citation
+
+If you use CoSQ, please cite the accompanying paper:
+
+```bibtex
+@misc{senol2026cosq,
+  author        = {Ali {\c{S}}enol},
+  title         = {When Should Large Language Models Abstain? Chain-of-Self-Questioning for Selective Risk Control},
+  year          = {2026},
+  eprint        = {xxxx.xxxx},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url           = {https://arxiv.org/abs/xxxx.xxxx}
+}
 ```
 
-## Citation and links
-
-- GitHub: <https://github.com/senolali/cosq>
-- PyPI: <https://pypi.org/project/cosq/>
-
-If you use the framework, please cite the accompanying paper and report the
-package version, model revision, dataset version, threshold, and cache policy.
+Replace `xxxx.xxxx` with the assigned arXiv identifier after approval. GitHub's
+**Cite this repository** menu is backed by [`CITATION.cff`](CITATION.cff).
+For reproducibility, also report the CoSQ version, model revision, dataset
+version, confidence threshold, option seed, and cache policy.
 
 ## License
 
-CoSQ is released under the MIT License. See [LICENSE](LICENSE).
+CoSQ is released under the [MIT License](LICENSE).

@@ -4,6 +4,8 @@ data:
   name: truthfulqa_mc1
   n: 100
   seed: 1002
+  option_order: balanced
+  option_seed: 1002
 strategies:
   - name: direct
   - name: cot

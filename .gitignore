@@ -16,5 +16,7 @@ dist/
 data/*
 !data/.gitkeep
 results/
+!paper/results/
+!paper/results/*.csv
 *.sqlite
 *.db

@@ -129,6 +129,12 @@ class DataConfig:
     n: int = 100
     seed: int = 1002
     path: str | None = None
+    option_order: str = "source"
+    option_seed: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.option_order not in {"source", "balanced"}:
+            raise ValueError("data.option_order must be either 'source' or 'balanced'")
 
     @classmethod
     def from_mapping(cls, mapping: dict[str, Any]) -> DataConfig:

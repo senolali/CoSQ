@@ -20,7 +20,7 @@ import numpy as np
 
 from cosq import prompts
 from cosq.config import ExperimentConfig, config_hash
-from cosq.data.base import sample_questions
+from cosq.data.base import prepare_questions, validate_mc_option_positions
 from cosq.runner.cache import CachingBackend, CompletionCache
 from cosq.runner.manifest import build_manifest, git_state
 from cosq.types import AnswerRecord, Question
@@ -120,7 +120,15 @@ def run_experiment(
         raise ValueError("max_workers must be at least 1")
     dataset = config.data.build()
     all_questions = dataset.load()
-    questions, ids_sha256 = sample_questions(all_questions, config.data.n, config.data.seed)
+    questions, ids_sha256, options_sha256 = prepare_questions(
+        all_questions,
+        config.data.n,
+        config.data.seed,
+        option_order=config.data.option_order,
+        option_seed=config.data.option_seed,
+    )
+    if config.mc_output:
+        validate_mc_option_positions(questions)
 
     run_id = make_run_id(config)
     run_dir = Path(results_root) / run_id
@@ -143,6 +151,17 @@ def run_experiment(
             "n": len(questions),
             "sample_seed": config.data.seed,
             "ids_sha256": ids_sha256,
+            "option_order": config.data.option_order,
+            "option_seed": (
+                None
+                if config.data.option_order == "source"
+                else (
+                    config.data.seed
+                    if config.data.option_seed is None
+                    else config.data.option_seed
+                )
+            ),
+            "options_sha256": options_sha256,
         },
         backend=raw_backend.fingerprint(),
         prompts_digest=prompts.prompt_digest(config.lang),

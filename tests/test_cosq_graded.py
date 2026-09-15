@@ -8,7 +8,13 @@ from cosq.backends.mock import MockBackend
 from cosq.decision import AGGREGATORS, ConfidenceRule, ThresholdRule, aggregate
 from cosq.parsing.stages import parse_confidence
 from cosq.registry import available
-from cosq.strategies import CoSQGradedGateStrategy, CoSQGradedStrategy
+from cosq.strategies import (
+    CoSQCriticalGroundedStrategy,
+    CoSQGradedGateStrategy,
+    CoSQGradedStrategy,
+    CoSQGroundedAdaptiveStrategy,
+    CoSQGroundedStrategy,
+)
 
 # --- the parser ------------------------------------------------------------
 
@@ -270,3 +276,81 @@ def test_graded_gate_answers_with_the_plain_cot_prompt(question, params):
 def test_invalid_unparseable_default_rejected():
     with pytest.raises(ValueError, match="unparseable_confidence"):
         CoSQGradedStrategy(MockBackend(), unparseable_confidence=2.0)
+
+
+def test_grounded_reads_the_confidence_field_not_numbers_in_the_fact(question, params):
+    """Numeric facts must not override the explicitly labelled confidence."""
+    backend = MockBackend(
+        responses={
+            "Required information:": "1. the relevant measurement",
+            "State the factual claim": (
+                "FACT: The measured area is 0.17 square miles.\n"
+                "CONFIDENCE: 95"
+            ),
+            "following factual claims passed": "B",
+        }
+    )
+    record = CoSQGroundedStrategy(
+        backend,
+        rule=ConfidenceRule(0.90, "mean"),
+        mc_output=True,
+    ).answer(question, params)
+
+    assert record.meta["confidences"] == pytest.approx([0.95])
+    assert record.meta["aggregate_confidence"] == pytest.approx(0.95)
+    assert record.meta["accepted_facts"] == [
+        "The measured area is 0.17 square miles."
+    ]
+    assert record.decision == "answer"
+
+
+def test_grounded_missing_confidence_does_not_parse_a_number_from_fact(question, params):
+    backend = MockBackend(
+        responses={
+            "Required information:": "1. the relevant measurement",
+            "State the factual claim": "FACT: The measured area is 95 square miles.",
+        }
+    )
+    record = CoSQGroundedStrategy(
+        backend, rule=ConfidenceRule(0.50, "mean"), mc_output=True
+    ).answer(question, params)
+
+    assert record.meta["confidences"] == [0.0]
+    assert record.meta["unparseable_confidences"] == 1
+    assert record.decision == "abstain"
+
+
+def test_critical_missing_confidence_does_not_parse_a_number_from_fact(question, params):
+    backend = MockBackend(
+        responses={
+            "Required information:": "[CRITICAL] the relevant measurement",
+            "This is a critical information need": (
+                "FACT: The measured area is 95 square miles."
+            ),
+        }
+    )
+    record = CoSQCriticalGroundedStrategy(
+        backend, rule=ConfidenceRule(0.50, "mean"), mc_output=True
+    ).answer(question, params)
+
+    assert record.meta["confidences"] == [0.0]
+    assert record.meta["unparseable_confidences"] == 1
+    assert record.decision == "abstain"
+
+
+def test_adaptive_missing_confidence_does_not_parse_a_number_from_fact(question, params):
+    backend = MockBackend(
+        responses={
+            "Required information:": "1. the relevant measurement",
+            "Mark whether it is critical": (
+                "ROLE: critical\nFACT: The measured area is 95 square miles."
+            ),
+        }
+    )
+    record = CoSQGroundedAdaptiveStrategy(
+        backend, rule=ConfidenceRule(0.50, "mean"), mc_output=True
+    ).answer(question, params)
+
+    assert record.meta["claims"][0]["confidence"] == 0.0
+    assert record.meta["unparseable_confidences"] == 1
+    assert record.decision == "abstain"

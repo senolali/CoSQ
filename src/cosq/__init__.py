@@ -35,7 +35,7 @@ from cosq.types import (
     ScoredRecord,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 #: Convenient alias: ``CoSQ(backend=..., rule=...)``.
 CoSQ = CoSQStrategy

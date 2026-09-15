@@ -15,6 +15,9 @@ from cosq.strategies.cosq_graded import CoSQGradedStrategy
 from cosq.types import AnswerRecord, GenerationParams, Question
 
 _FACT = re.compile(r"^\s*(?:FACT|CLAIM)\s*:\s*(.*?)\s*$", re.IGNORECASE | re.MULTILINE)
+_CONFIDENCE = re.compile(
+    r"^\s*CONFIDENCE\s*:\s*(.*?)\s*$", re.IGNORECASE | re.MULTILINE
+)
 
 
 @register("strategy", "cosq_grounded")
@@ -73,7 +76,12 @@ class CoSQGroundedStrategy(CoSQGradedStrategy):
             )
             fact_match = _FACT.search(reply)
             facts.append(fact_match.group(1).strip() if fact_match else "")
-            value = parse_confidence(reply)
+            confidence_match = _CONFIDENCE.search(reply)
+            value = (
+                parse_confidence(confidence_match.group(1))
+                if confidence_match
+                else None
+            )
             if value is None:
                 unreadable += 1
                 value = self.unparseable_confidence

@@ -1,14 +1,17 @@
-name: pilot_truthfulqa_mc_openai
-model: configs/model/openai_gpt4o_mini.yaml
+# Thirty-question, network-backed protocol check before a full campaign.
+name: pilot_truthfulqa_mc
+model: configs/model/hf_llama3_8b_instruct.yaml
 data:
   name: truthfulqa_mc1
-  n: 100
+  n: 30
   seed: 1002
   option_order: balanced
   option_seed: 1002
 strategies:
   - name: direct
+    label: direct_mc
   - name: cot
+    label: cot_mc
   - name: cosq_grounded
     label: grounded_mc_mean090
     threshold: 0.90

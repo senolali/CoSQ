@@ -102,7 +102,11 @@ class CoSQCriticalGroundedStrategy:
             fact_match = re.search(r"^\s*FACT\s*:\s*(.*?)\s*$", reply, re.I | re.M)
             facts.append(fact_match.group(1).strip() if fact_match else "")
             confidence_match = re.search(r"^\s*CONFIDENCE\s*:\s*(.*?)\s*$", reply, re.I | re.M)
-            value = parse_confidence(confidence_match.group(1) if confidence_match else reply)
+            value = (
+                parse_confidence(confidence_match.group(1))
+                if confidence_match
+                else None
+            )
             if value is None:
                 unreadable += 1
                 value = self.unparseable_confidence

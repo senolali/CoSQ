@@ -1,2 +1,2 @@
 {question_block}
-Return exactly one token corresponding to one of the option labels shown above, or ABSTAIN. Do not provide an explanation.
+Return exactly one token corresponding to one of the option labels shown above. Do not provide an explanation.

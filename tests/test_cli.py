@@ -42,6 +42,8 @@ def test_run_evaluate_analyze_report(tmp_path, capsys, monkeypatch):
                 "run",
                 "--config",
                 config,
+                "--model",
+                "configs/model/mock.yaml",
                 "--backend",
                 "mock",
                 "--quiet",

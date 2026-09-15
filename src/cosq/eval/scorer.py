@@ -23,7 +23,11 @@ def score_record(record: AnswerRecord, question: Question) -> ScoredRecord:
     materially more of it in open-ended mode, where matching is lexical rather than a
     label lookup [M22].
     """
-    if record.decision == "abstain" or detect_abstention(record.answer_text):
+    allows_abstention = bool(record.meta.get("allows_abstention", True))
+    forced_mc = bool(record.meta.get("mc_output")) and not allows_abstention
+    if record.decision == "abstain" or (
+        not forced_mc and detect_abstention(record.answer_text)
+    ):
         return ScoredRecord(record=record, outcome="idk", matched_index=None)
 
     # Which matcher applies is a property of how the question was presented, and the
@@ -33,6 +37,10 @@ def score_record(record: AnswerRecord, question: Question) -> ScoredRecord:
     else:
         index = parse_mc_choice(record.answer_text, question.options)
     if index is None:
+        # Direct and CoT are forced-choice controls. A malformed response violates
+        # that contract and is scored wrong; it must not become an implicit abstention.
+        if forced_mc:
+            return ScoredRecord(record=record, outcome="wrong", matched_index=None)
         if question.meta.get("scoring") == "short_answer":
             return ScoredRecord(record=record, outcome="wrong", matched_index=None)
         return ScoredRecord(record=record, outcome="unparseable", matched_index=None)

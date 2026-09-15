@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use CoSQ in your research, please cite the accompanying paper."
+title: "CoSQ: Chain-of-Self-Questioning"
+type: software
+authors:
+  - family-names: "Şenol"
+    given-names: "Ali"
+    orcid: "https://orcid.org/0000-0003-0364-2837"
+version: 0.2.1
+date-released: 2026-09-15
+repository-code: "https://github.com/senolali/CoSQ"
+url: "https://github.com/senolali/CoSQ"
+license: MIT
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Şenol"
+      given-names: "Ali"
+      orcid: "https://orcid.org/0000-0003-0364-2837"
+  title: "When Should Large Language Models Abstain? Chain-of-Self-Questioning for Selective Risk Control"
+  year: 2026
+  journal: "arXiv preprint"
+  identifiers:
+    - type: other
+      value: "arXiv:xxxx.xxxx"
+      description: "Replace with the assigned arXiv identifier"
+  url: "https://arxiv.org/abs/xxxx.xxxx"
