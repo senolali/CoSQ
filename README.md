@@ -305,10 +305,10 @@ If you use CoSQ, please cite the accompanying paper:
   author        = {Ali {\c{S}}enol},
   title         = {When Should Large Language Models Abstain? Chain-of-Self-Questioning for Selective Risk Control},
   year          = {2026},
-  eprint        = {xxxx.xxxx},
+  eprint        = {2609.17516},
   archivePrefix = {arXiv},
   primaryClass  = {cs.CL},
-  url           = {https://arxiv.org/abs/xxxx.xxxx}
+  url           = {https://arxiv.org/abs/2609.17516},
 }
 ```
 
