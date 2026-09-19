@@ -16,8 +16,7 @@ This repository accompanies:
 > **When Should Large Language Models Abstain? Chain-of-Self-Questioning for
 > Selective Risk Control**
 
-The paper has been submitted to arXiv. Its temporary identifier in this release
-is `arXiv:xxxx.xxxx` and will be replaced when moderation is complete.
+The paper has been submitted to arXiv: https://arxiv.org/abs/2609.17516
 
 ## Why CoSQ?
 
